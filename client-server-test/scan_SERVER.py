@@ -67,7 +67,6 @@ class FileScan:
             return
         
         occurances = patternSearchList.count(self.__patternData)
-        print(f"[MATCH]  Found {occurances} match(es) of rule {self.__ruleID} (Pattern {self.__patternID})")
         self.matches.append( Match(self.__ruleID, 
                                      self.__patternID, 
                                      occurances) )
@@ -94,7 +93,6 @@ class FileScan:
             return
         
         occurances = patternSearchList.count(self.__patternData)
-        print(f"[MATCH]  Found {occurances} match(es) of rule {self.__ruleID} (Pattern {self.__patternID})")
         self.matches.append( Match(self.__ruleID, 
                                      self.__patternID, 
                                      occurances) )
@@ -119,7 +117,6 @@ class FileScan:
             return
         
         occurances = patternSearchList.count(patternBytes)
-        print(f"[MATCH]  Found {occurances} match(es) of rule {self.__ruleID} (Pattern {self.__patternID})")
         self.matches.append( Match(self.__ruleID, 
                                    self.__patternID, 
                                    occurances) )
@@ -128,13 +125,10 @@ class FileScan:
         try:
             self.__fileContents = bytes.decode(self.__fileContents)
         except:
-            print("[WARN]   Regular Expressions can not be performed on binary files.")
-            print("     \-> Skipping Regular Expression Pattern...")
             return
     
         allRegexMatches = re.findall(self.__patternData, self.__fileContents)
         if len(allRegexMatches > 0):
-            print(f"[MATCH]  Found {len(allRegexMatches)} match(es) of rule {self.__ruleID} (Pattern {self.__patternID})")
             self.matches.append( Match(self.__ruleID, 
                                        self.__patternID, 
                                        len(allRegexMatches)) )

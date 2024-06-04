@@ -157,7 +157,7 @@ def scanFile(client: Client) -> None:
         if not readSuccess:
             filePath = input("File Path > ")
             
-    toSend = json.dumps( {"type": "scan_request", "user_id": str(userID)} )
+    toSend = json.dumps( {"type": "scan_request", "user_id": str(userID), "filename": filePath} )
     client.send( toSend )
         
     toSend = json.dumps( {"type": "transfer_begin", "body":len(fileContents)} )
@@ -168,6 +168,51 @@ def scanFile(client: Client) -> None:
         
     toSend = json.dumps( {"type": "transfer_end"} )
     client.send(toSend)
+
+    while True:
+        last_log = client.getLastLog()
+            
+        if last_log["type"] == "scan_done":
+            cls()
+            printHeader("SCAN COMPLETE")
+            
+            totalMatches = 0
+            for match in last_log["body"]:
+                totalMatches += last_log["body"][match][0]
+            
+            totalSuspicion = last_log['susp']
+            
+            threatLevel = "Low"
+            suggestedAction = "None"
+            
+            if totalSuspicion > 10:
+                threatLevel = "Medium"
+                suggestedAction = "Manual Analysis"
+            if totalSuspicion > 30:
+                threatLevel = "High"
+                suggestedAction = "Quarrantine"
+            if totalSuspicion > 50:
+                threatLevel = "Extreme"
+                suggestedAction = "Delete"
+            
+            print(f"Total matches found: {totalMatches}")
+            print(f"Total Suspicion:     {totalSuspicion}")
+            print(f"Threat Level:        {threatLevel}")
+            print(f"Suggested Action:    {suggestedAction}")
+            
+            print()
+            if len(last_log["body"]) > 0:
+                printHeader("MATCH INFORMATION")
+                
+                for match in last_log["body"]:
+                    matchInfo = last_log["body"][match]
+                    
+                    print(f"Rule Name:        {match}")
+                    print(f"Rule Description: {matchInfo[1]}")
+                    print(f"# of Matches:     {matchInfo[0]}")
+                    print()
+                
+            break
     
 def mainMenu(client: Client):
     global userID
@@ -197,6 +242,8 @@ def mainMenu(client: Client):
             client.sock.close()
             client.listenerThread.join()
             quit()
+            
+    input("[PRESS ENTER] ")
 
 userID = None
 userName = None
@@ -213,4 +260,5 @@ if __name__ == "__main__":
     userEmail = userInfo[2]
     userPassword = userInfo[3]
     
-    mainMenu(client)
+    while True:
+        mainMenu(client)

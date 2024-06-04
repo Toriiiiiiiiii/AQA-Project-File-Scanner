@@ -2,6 +2,7 @@ import socket
 import threading
 import sqlite3
 import json
+import datetime
 
 from util import *
 from scan_SERVER import *
@@ -68,7 +69,11 @@ class Server:
         dbCurs = dbConn.cursor()
         
         while self.isRunning:
-            data = conn.recv(1024)
+            try:
+                data = conn.recv(1024)
+            except:
+                break
+            
             if not data:
                 return
             
@@ -98,6 +103,11 @@ class Server:
             if bodyJSON["type"] == "scan_request":
                 userID = bodyJSON["user_id"]
                 
+                dbCurs.execute(f"INSERT INTO targetFile(fileName, customerID, scanDate) VALUES('{bodyJSON['filename']}', {userID}, '{datetime.date.today().strftime('%d/%m/%Y')}')")
+                dbConn.commit()
+                
+                targetID = dbCurs.lastrowid
+                
                 transferStartMessage = conn.recv(1024)
                 transferStartJSON = json.loads( bytes.decode(transferStartMessage, "ascii") )
                 fileSize = transferStartJSON["body"]
@@ -105,6 +115,18 @@ class Server:
                 fileContents = conn.recv(fileSize)
                 fileScanner = FileScan(fileContents, dbConn, dbCurs)
                 print(fileScanner.scanResult, fileScanner.matches)
+                
+                ruleMatches = {}
+                suspicion = 0
+                for match in fileScanner.matches:
+                    ruleRecord = dbCurs.execute(f"SELECT * FROM ruleFile WHERE ruleID={match.ruleID}").fetchone()
+                    ruleMatches[ruleRecord[1]] = [match.occurances, ruleRecord[2]]
+                    suspicion += ruleRecord[3]
+                    
+                    dbCurs.execute(f"INSERT INTO scanFile(targetID, ruleID, patternID, numFound) VALUES({targetID}, {match.ruleID}, {match.patternID}, {match.occurances})")
+                    dbConn.commit()
+                
+                conn.sendall(json.dumps( {"type": "scan_done", "body": ruleMatches, "susp": suspicion} ).encode("ascii"))
             
         conn.close()
         dbConn.close()
