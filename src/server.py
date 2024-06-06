@@ -84,9 +84,10 @@ class Server:
                 try:
                     result = dbCurs.execute(bodyJSON["body"]).fetchall()
                 except Exception as e:
-                    result = e
+                    print(e)
+                    result = str(e)
                 
-                result = {"type": "sql_response", "body": result}
+                result = {"type": "sql_response", "body": result, "query": bodyJSON["body"]}
                 conn.sendall(str( json.dumps(result) ).encode("ascii"))
                 dbConn.commit()
                 
@@ -114,7 +115,6 @@ class Server:
                 
                 fileContents = conn.recv(fileSize)
                 fileScanner = FileScan(fileContents, dbConn, dbCurs)
-                print(fileScanner.scanResult, fileScanner.matches)
                 
                 ruleMatches = {}
                 suspicion = 0

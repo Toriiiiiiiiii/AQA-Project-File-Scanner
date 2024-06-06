@@ -72,7 +72,8 @@ def setupDatabase():
     sqlCommand += "CREATE TABLE customerFile("
     sqlCommand += "customerID INTEGER PRIMARY KEY AUTOINCREMENT,"
     sqlCommand += "customerName TEXT,"
-    sqlCommand += "customerEmail TEXT)"
+    sqlCommand += "customerEmail TEXT,"
+    sqlCommand += "customerPassword TEXT)"
 
     databaseCurs.execute(sqlCommand)
     databaseConn.commit()

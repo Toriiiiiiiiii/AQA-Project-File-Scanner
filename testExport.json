@@ -1,1 +1,0 @@
-[{"name": "Debug Check", "desc": "A rule to see if a program checks for a debugger.", "susp": 2.0, "patterns": [{"type": "INS", "value": "IsDebuggerPresent"}, {"type": "INS", "value": "PsIsProcessBeingDebugged"}]}]
