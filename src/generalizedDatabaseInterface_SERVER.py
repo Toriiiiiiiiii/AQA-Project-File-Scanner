@@ -6,9 +6,8 @@ from util import *
 # \-> Allows for data entry, record updating and deleting in a table.
 # \-> Class will automatically detect field names, types and the primary key.
 class GeneralDataInterface:
-    def __init__(self, tableName: str, client) -> None:
+    def __init__(self, tableName: str) -> None:
         self.tableName = tableName
-        self.client = client
         
         self.fieldNames = self.getFieldNames()
         self.fieldTypes = self.getFieldTypes()
@@ -18,17 +17,17 @@ class GeneralDataInterface:
         
     # Returns a list of all fields in a table
     def getFieldNames(self) -> list:
-        cursor = self.client.describe(f"SELECT * FROM {self.tableName}")
+        cursor = databaseCurs.execute(f"SELECT * FROM {self.tableName}")
         
         # List comprehension using query result information to get names of fields.
-        return [description[0] for description in cursor]
+        return [description[0] for description in cursor.description]
     
     # Returns a list giving the corresponding types of the fields.
     def getFieldTypes(self) -> list:
         result = []
         
         # Get info for the table
-        info = self.client.sendQuery(f"PRAGMA table_info('{self.tableName}')")
+        info = databaseCurs.execute(f"PRAGMA table_info('{self.tableName}')").fetchall()
         for fieldInfo in info:
             # fieldInfo[2] corresponds to the data type of the field.
             result.append(fieldInfo[2])
@@ -37,7 +36,7 @@ class GeneralDataInterface:
     
     # Returns the name of the primary key of a table
     def getPrimaryKeyName(self) -> str:
-        return self.client.sendQuery(f"SELECT field.name FROM pragma_table_info('{self.tableName}') as field WHERE field.pk = 1")[0][0]
+        return databaseCurs.execute(f"SELECT field.name FROM pragma_table_info('{self.tableName}') as field WHERE field.pk = 1").fetchone()[0]
     
     def printFieldValuesForEntry(self) -> None:
         index = 0
@@ -91,7 +90,7 @@ class GeneralDataInterface:
         while not result:
             recordID = input(f"{self.primaryKey} : ")
             sqlQuery = f"SELECT * FROM {self.tableName} WHERE {self.primaryKey}={recordID}"
-            result = self.client.sendQuery(sqlQuery)[0]
+            result = databaseCurs.execute(sqlQuery).fetchone()
             
             if not result:
                 print(f"[ERROR] Record with ID {recordID} was not found!")
@@ -105,7 +104,8 @@ class GeneralDataInterface:
         if confirm == "n":
             return
         
-        self.client.sendQuery(f"DELETE FROM {self.tableName} WHERE {self.primaryKey}={recordID}")
+        databaseCurs.execute(f"DELETE FROM {self.tableName} WHERE {self.primaryKey}={recordID}")
+        databaseConn.commit()
         print("Record Deleted!")
         return recordID
     
@@ -117,7 +117,7 @@ class GeneralDataInterface:
         while not result:
             recordID = input(f"{self.primaryKey} : ")
             sqlQuery = f"SELECT * FROM {self.tableName} WHERE {self.primaryKey}={recordID}"
-            result = self.client.sendQuery(sqlQuery)[0]
+            result = databaseCurs.execute(sqlQuery).fetchone()
             
             if not result:
                 print(f"[ERROR] Record with ID {recordID} was not found!")
@@ -144,7 +144,8 @@ class GeneralDataInterface:
             
         sql += ", ".join(fieldSetStatements)
         sql += f" WHERE {self.primaryKey}={recordID}"
-        self.client.sendQuery(sql)
+        databaseCurs.execute(sql)
+        databaseConn.commit()
         print("Record updated!")
 
     
@@ -156,40 +157,46 @@ class GeneralDataInterface:
         sql =  f"INSERT INTO {self.tableName}({', '.join(self.fieldsWithoutPK)})"
         sql += f"VALUES ({', '.join(self.fieldValues)})"
         
-        self.client.sendQuery(sql)
+        databaseCurs.execute(sql)
+        databaseConn.commit()
         print("Record Inserted!")
         
         
-    def printAll(self) -> None:
-        allRecords = self.client.sendQuery(f"SELECT * FROM {self.tableName}")
+    def printAll(self, fields = None, condition = None) -> None:
+        if not fields or ", ".join(fields) == "*":
+            fields = self.fieldNames
+            
+        if not condition:
+            condition = "1=1"
+        allRecords = databaseCurs.execute(f"SELECT {', '.join(fields)} FROM {self.tableName} WHERE {condition}").fetchall()
         
         fieldLengths = {}
         
-        for field in self.fieldNames:
+        for field in fields:
             fieldLengths[field] = len(field)
         
         for record in allRecords:
-            for fieldIndex in range(len(self.fieldNames)):
-                fieldName = self.fieldNames[fieldIndex]
+            for fieldIndex in range(len(fields)):
+                fieldName = fields[fieldIndex]
                 
                 if len(str(record[fieldIndex])) > fieldLengths[fieldName]:
                     fieldLengths[fieldName] = len(str(record[fieldIndex]))
                  
         print("| ", end="")
-        for field in self.fieldNames:
+        for field in fields:
             print(f"%-{fieldLengths[field]}s" %(field), end=" | ")
         print("\n|-", end="")
         
-        for field in self.fieldNames:
+        for field in fields:
             print(f"-" * fieldLengths[field], end="-|")
             
-            if field != self.fieldNames[len(self.fieldNames)-1]:
+            if field != fields[len(fields)-1]:
                 print("-", end="")
                 
         for record in allRecords:
             print("\n| ", end="")
-            for fieldIndex in range(len(self.fieldNames)):
-                fieldName = self.fieldNames[fieldIndex]
+            for fieldIndex in range(len(fields)):
+                fieldName = fields[fieldIndex]
                 
                 print(f"%-{fieldLengths[fieldName]}s" % record[fieldIndex], end=" | ")
         

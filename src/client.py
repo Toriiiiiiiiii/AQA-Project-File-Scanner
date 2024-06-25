@@ -3,7 +3,6 @@ import json
 import threading
 import time
 
-from generalizedDatabaseInterface_CLIENT import *
 from util import *
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
@@ -126,18 +125,23 @@ def customerLoginMenu(client: Client) -> tuple:
     
     print("1) Login")
     print("2) Register")
+    print("3) Back")
     
-    option = input("> ")
-    while option not in ["1", "2"]:
+    print()
+    print("Please enter an option")
+    option = input("|-> ")
+    while option not in ["1", "2", "3"]:
         print()
         print("Please enter a valid choice!")
-        option = input("> ")
+        option = input("|-> ")
         
     match option:
         case "1":
             return customerLogin(client)
         case "2":
             return customerRegister(client)
+        case "3":
+            return None
     
 def scanFile(client: Client) -> None:
     global userID
@@ -227,13 +231,15 @@ def generateReports(client: Client):
         
     print("x) Back")
         
-    option = input("> ")
+    print()
+    print("Please enter an option.")
+    option = input("|-> ")
     if option.lower() == "x":
         return
     
     while option not in [str(n) for n in range(1, len(allFiles) + 1)]:
         print("Please enter a valid choice!")
-        option = input("> ")
+        option = input("|-> ")
         
     index = int(option) - 1
     target = allFiles[index]
@@ -294,10 +300,12 @@ def generateReports(client: Client):
     print("2) Save with formatting (Markdown)")
     print("3) Back")
     
-    option = input("> ")
+    print()
+    print("Please enter an option (1-3).")
+    option = input("|-> ")
     while option not in ["1", "2", "3"]:
         print("Please enter a valid option!")
-        option = input("> ")
+        option = input("|-> ")
         
     match option:
         case "1":
@@ -386,11 +394,13 @@ def mainMenu(client: Client):
     print("2) Generate Scan Reports")
     print("3) Quit")
     
-    option = input("> ")
+    print()
+    print("Please enter an option (1-3).")
+    option = input("|-> ")
     while option not in ["1", "2", "3"]:
         print()
         print("Please enter a valid choice!")
-        option = input("> ")
+        option = input("|-> ")
         
     match option:
         case "1":
@@ -413,6 +423,12 @@ if __name__ == "__main__":
     client = Client(HOST, PORT)
     
     userInfo = customerLoginMenu(client)
+    
+    if not userInfo:
+        print("Quitting...")
+        client.sock.close()
+        client.listenerThread.join()
+        quit()
     
     userID = userInfo[0]
     userName = userInfo[1]

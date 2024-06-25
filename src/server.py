@@ -6,6 +6,7 @@ import datetime
 
 from util import *
 from scan_SERVER import *
+from generalizedDatabaseInterface_SERVER import *
 
 def loadRulesFromJson(path: str) -> None:
     databaseConn = sqlite3.connect("SEARCHLIGHT CYBER DATABASE.db")
@@ -161,9 +162,25 @@ class Server:
             
 if __name__ == "__main__":
     server = Server(7777)
+    print()
+    print("Searchlight Cyber File Scanner - Server Console.")
+    print("Use the command 'help' for a list of commands.")
+    print("Use the command 'quit' to disconnect all clients and quit.")
+    print()
     
     while server.isRunning:
         consoleCmd = input("> ").lower()
+        
+        if consoleCmd == "help":
+            print()
+            print("LIST OF COMMANDS")
+            print("----------------")
+            print("|-> help  : Prints a list of commands")
+            print("|-> quit  : Disconnects all clients and quits")
+            print("|-> sql   : Opens the SQL shell.")
+            print("|-> conns : List all connected clients (Alias: connections)")
+            print("|-> load  : Load rules from JSON (Alias: loadrules)")
+            print()
         
         if consoleCmd == "quit":
             print("Waiting for clients to disconnect before quitting...")
@@ -185,11 +202,25 @@ if __name__ == "__main__":
                 
         if consoleCmd == "sql":
             while True:
-                print("== SQL Input : Type 'q' to go back. ==")
+                print("== SQL Input : Type 'q' to go back, or 'commit' to save changes. ==")
                 command = input("sql > ")
                 
                 if command.lower() == "q": break
                 elif command.lower() == "commit": databaseConn.commit()
+                elif command.startswith("SELECT"):
+                    splitCommand = command[7:].split(" FROM ")
+                    splitCommand += splitCommand.pop().split(" WHERE ")
+                    
+                    fields = splitCommand[0].split(",")
+                    tableName = splitCommand[1]
+                    
+                    if len(splitCommand) > 2:
+                        conditions = splitCommand[2]
+                    else:
+                        conditions = None
+                    
+                    interface = GeneralDataInterface(tableName)
+                    interface.printAll(fields=fields, condition=conditions)
                 else:
                     try:
                         for record in databaseCurs.execute(command).fetchall():
